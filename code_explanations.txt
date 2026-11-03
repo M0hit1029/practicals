@@ -1,138 +1,395 @@
 PRACTICAL DEEP-LEARNING CODE GUIDE
 ===================================
 
-This folder contains 19 notebooks, collected into all.py. The sections below
-explain the main code and concepts used in each practical. The notebook files
-remain the best place to run one experiment at a time because all.py executes
-many independent experiments in sequence.
+This guide explains both what the programs do and the machine-learning ideas
+behind them. The notebooks are the original, runnable experiments. all.py is a
+single collection of the same experiments, so its independent sections should
+usually be run separately when a dataset or dependency is not available.
+
+
+0. THE COMMON MACHINE-LEARNING PIPELINE
+---------------------------------------
+
+Every supervised experiment follows the same broad cycle:
+
+1. Load data. Images, tabular rows, or text are read with pandas, NumPy, or
+   Keras dataset utilities.
+2. Separate inputs and targets. x contains the information given to the model;
+   y contains the answer the model should learn.
+3. Preprocess. Pixel values are scaled, text is tokenized, and sequences are
+   converted into fixed-size windows.
+4. Split data. Training data updates weights. Validation data helps select
+   settings and detect overfitting. Test data is held back for final reporting.
+5. Build a model. Layers transform the input into a prediction or a
+   reconstruction.
+6. Compile. The optimizer chooses how weights change, the loss measures error,
+   and metrics summarize performance.
+7. Fit. An epoch is one pass through the training data. A batch is the smaller
+   group used for one weight update.
+8. Evaluate and visualize. Loss, accuracy, AUC, classification reports, and
+   training curves show how well the model generalizes.
+
+The model does not memorize a rule written by the programmer. During training,
+backpropagation calculates how much each weight contributed to the loss, and an
+optimizer such as Adam moves the weights in a direction that reduces that loss.
+
+Normalization is important because features with very different numeric scales
+make optimization difficult. Image code normally divides 0-255 pixels by 255.
+StandardScaler makes a feature approximately zero-mean and unit-variance, while
+MinMaxScaler maps values into a bounded interval. A scaler should be fitted on
+training data in a production experiment, then reused for validation and test
+data, to avoid data leakage.
+
+`sparse_categorical_crossentropy` is used when each example has one integer
+class label, such as 0 through 9. `binary_crossentropy` is used for a two-class
+probability. `mse` (mean squared error) is used when the output should reproduce
+continuous input values, as in an autoencoder.
 
 
 1. FEED-FORWARD NEURAL NETWORKS (FNN)
 -------------------------------------
 
-1B_FNN_FashionMNIST.ipynb
-Loads Fashion-MNIST CSV data, separates labels from 784 pixel features, scales
-pixels to 0-1, and trains a dense neural network. ReLU learns nonlinear
-features and softmax produces probabilities for ten clothing classes.
+Concept
+-------
+
+An FNN, also called a multilayer perceptron (MLP), passes information in one
+direction: input -> hidden layers -> output. A Dense layer computes
+
+    output = activation(input * weights + bias)
+
+Each neuron is connected to every value in the previous layer. ReLU,
+`max(0, x)`, supplies non-linearity, allowing the network to learn combinations
+of features instead of only a linear decision boundary. The final softmax
+converts class scores (logits) into probabilities whose sum is one.
+
+FNNs work well for tabular data and flattened vectors. They are less suitable
+for images because flattening removes neighborhood information: adjacent
+pixels no longer have an explicit relationship.
+
+1B_FNN_FashionMNIST.ipynb and 1E_FNN_SignMNIST.ipynb
+----------------------------------------------------------------
+
+The CSV files contain one `label` column and 784 grayscale pixel columns.
+`to_numpy()` converts pandas columns to arrays. The label is removed from x,
+and `Rescaling(1./255)` changes pixels from 0-255 to 0-1 inside the model.
+
+The Fashion-MNIST model has:
+
+    Input(784) -> Dense(128, ReLU) -> Dense(10, softmax)
+
+There are ten clothing classes. The Sign-MNIST model uses 25 output units
+because it predicts 25 sign classes. The output width must always match the
+number of possible labels.
+
+The integer labels are intentionally not one-hot encoded. That is why sparse
+categorical cross-entropy is appropriate. `validation_data=(x_test, y_test)`
+measures the model on the supplied test set after every epoch; this is useful
+for demonstration, but a rigorous experiment should keep a separate validation
+split and use the test set only once at the end.
 
 1C_FNN_CIFAR10.ipynb
-Loads CIFAR-10 image arrays, normalizes RGB values, and trains a fully
-connected classifier. Flattening makes the image suitable for Dense layers,
-but it removes the spatial relationships that a CNN can use.
+--------------------
 
-1E_FNN_SignMNIST.ipynb
-Uses the same supervised classification pattern for hand-sign images:
-preprocess images, encode labels, train Dense layers, and evaluate accuracy.
-
-Important concepts: supervised learning, train/test split, normalization,
-Dense layers, ReLU, softmax, cross-entropy loss, Adam optimization, epochs,
-validation data, and accuracy.
+CIFAR-10 has 32 x 32 RGB images, or 3072 values after flattening. The code
+uses `train_test_split(..., stratify=y)` so the class proportions remain
+similar in both partitions. The FNN receives shape `(3072,)`; it can classify
+the vector but cannot directly exploit two-dimensional image structure.
 
 
 2. CONVOLUTIONAL NEURAL NETWORKS (CNN)
 --------------------------------------
 
+Concept
+-------
+
+A CNN is designed for grid-shaped data such as images. A small learnable
+filter slides across the image and computes a local weighted sum. The result
+is a feature map showing where a learned pattern occurs. Filters in early
+layers commonly learn edges and colors; deeper filters combine them into
+textures, parts, and object-level patterns.
+
+Important CNN terms:
+
+* `Conv2D(32, 3)`: learns 32 filters with a 3 x 3 receptive field.
+* Receptive field: the input region that can affect one activation.
+* Stride: how far a filter moves at each step. A larger stride downsamples.
+* Padding: extra border pixels. `valid` (the default here) shrinks the
+  spatial dimensions; `same` preserves them for stride 1.
+* Pooling: summarizes a local region. Max pooling keeps the strongest
+  activation and reduces computation and sensitivity to small translations.
+* Channels: grayscale has one channel; RGB has three.
+* `Flatten`: converts feature maps to a vector before Dense classification.
+* Dropout: randomly disables training activations, reducing co-adaptation and
+  often reducing overfitting. The shown CNNs do not currently use it.
+
+Unlike an FNN, a convolution reuses the same filter at every location. This
+creates parameter sharing and preserves local spatial relationships, so a CNN
+usually learns images more efficiently.
+
 2A_CNN_CIFAR10.ipynb
-Trains a CNN on color CIFAR-10 images. Convolution filters detect local
-patterns such as edges and textures; pooling reduces spatial size and makes
-features more robust. Dense layers classify the learned representation.
+--------------------
+
+The 3072-value CSV rows are reshaped to `(-1, 32, 32, 3)` before training.
+The model is:
+
+    32x32x3 -> Conv2D(32) -> MaxPool -> Conv2D(64) -> MaxPool
+             -> Flatten -> Dense(64) -> Dense(10, softmax)
+
+The second convolution receives features from the first convolution rather than
+raw pixels. Pooling progressively reduces width and height, while the number
+of feature channels increases. This trades exact location for richer patterns.
 
 2B_CNN_HandMNIST.ipynb and 2C_CNN_SignMNIST.ipynb
-Apply the same image-recognition pipeline to hand and sign datasets. The
-important difference from an FNN is that image height, width, and channels are
-preserved while convolution extracts spatial features.
+--------------------------------------------------
 
-Important concepts: Conv2D, pooling, feature maps, padding, stride, dropout,
-data shape (height, width, channels), and image augmentation.
+The 784 pixel values are reshaped to `28 x 28 x 1`, preserving the image grid.
+The final Dense layer has 10 units for handwritten digits and 25 for signs.
+The rest of the architecture is the same, demonstrating that the output head
+must be adapted to the dataset's label space.
 
 
-3. AUTOENCODERS (AE) AND ANOMALY DETECTION
-------------------------------------------
+3. AUTOENCODERS AND ANOMALY DETECTION
+-------------------------------------
+
+Concept
+-------
+
+An autoencoder learns without needing a class label for every training
+example. It has two parts:
+
+* Encoder: compresses x into a smaller latent (bottleneck) representation z.
+* Decoder: expands z back into a reconstruction x_hat.
+
+It minimizes reconstruction loss, commonly
+
+    MSE = mean((x - x_hat)^2)
+
+For anomaly detection, train primarily or exclusively on normal examples.
+The model becomes good at reconstructing normal patterns. An unusual example
+usually reconstructs poorly, producing a high reconstruction error. A threshold
+then converts the continuous error into a normal/anomaly decision.
+
+The threshold is a policy choice, not a learned universal constant. This code
+uses the 95th or 99th percentile of normal errors, meaning that approximately
+5% or 1% of normal training examples may be flagged. A lower threshold catches
+more anomalies but increases false positives. A ROC-AUC evaluates ranking quality
+over all thresholds; a classification report evaluates one selected threshold.
 
 3A_AE_CreditCard.ipynb
-Learns to reconstruct normal transaction features through a bottleneck.
-Reconstruction error can identify transactions that do not look normal.
+----------------------
+
+The `Class` column is the evaluation label and `Time` is removed from the
+features. StandardScaler puts numeric variables on comparable scales. Only
+normal transactions (`y == 0`) are used in `model.fit`, so the network learns
+the normal transaction manifold. The symmetric Dense sizes
+`29 -> 16 -> 8 -> 16 -> 29` form the encoder and decoder.
 
 3B_AE_ECG_sub_MVTec.ipynb, 3E_AE_ECG_sub_NSLKDD.ipynb, and
 3F_AE_SignMNIST_anomaly.ipynb
-Use autoencoders for signals, network records, or sign images. The model
-learns a compact encoding and a decoder reconstructs the input. A threshold
-on reconstruction loss separates likely anomalies from normal samples.
+--------------------------------------------------------------
+
+These examples apply the same principle to ECG vectors, network-like records,
+and images. The label is used to select normal training data and to calculate
+AUC/reporting metrics; it is not supplied as an input to the autoencoder.
+For Sign-MNIST, class 0 is intentionally treated as the anomaly and the other
+23 classes as normal. The output sigmoid in that image example keeps
+reconstructed pixels in the 0-1 range.
 
 3C_AE_Energy_LSTM.ipynb and 3D_AE_NASA_LSTM.ipynb
-Use LSTM-based sequence autoencoders. LSTMs retain information across time
-steps, which is useful for energy and equipment sensor measurements.
+-------------------------------------------------
 
-Important concepts: encoder, latent/bottleneck vector, decoder, reconstruction
-loss (usually mean squared error), sequence windows, LSTM memory, and anomaly
-threshold selection.
+Time-series rows are converted into overlapping sliding windows. A window of
+10 or 15 means the model receives several consecutive observations at once.
+The window label is anomalous if any row inside it is anomalous.
+
+An LSTM (Long Short-Term Memory) is a recurrent neural network with gates that
+control what information to forget, store, and expose. It can preserve useful
+information across time steps and is better suited to ordered sensor readings
+than treating every row independently.
+
+The sequence autoencoder is:
+
+    LSTM encoder -> RepeatVector(W) -> LSTM decoder
+                  -> TimeDistributed(Dense(number_of_features))
+
+The encoder compresses the whole sequence into its final state. RepeatVector
+copies that state to each decoder time step. `return_sequences=True` makes the
+decoder emit one reconstructed feature vector per time step. The error is
+averaged over both time and feature axes.
 
 
 4. WORD EMBEDDINGS AND CBOW
 ---------------------------
 
+Concept
+-------
+
+Words are symbolic tokens, but neural networks need numbers. A word embedding
+maps each vocabulary item to a dense vector, for example 64 floating-point
+values. Unlike a one-hot vector, an embedding can represent graded similarity:
+words appearing in similar contexts tend to obtain nearby vectors.
+
+CBOW means Continuous Bag of Words. For a sentence such as
+
+    the movie was really great
+
+with a window around `really`, the context words are used to predict the
+center/target word. Training repeatedly adjusts the embedding and output
+weights so the correct target receives high probability. The model is not
+learning a dictionary definition; it learns distributional relationships from
+co-occurrence. Consequently, similarity is corpus-dependent and does not
+guarantee synonymy.
+
+The Gensim calls use `Word2Vec(..., sg=0)`. `sg=0` selects CBOW; `sg=1` would
+select skip-gram, which predicts context words from a center word.
+
+The TensorFlow replacement in `cbow_tensorflow_utils.py` implements the same
+idea explicitly:
+
+1. Count tokens and create `word_to_id` and `vocabulary`.
+2. Convert each token to an integer ID.
+3. Collect exactly `2 * window` context IDs around each target.
+4. Look up vectors with `Embedding`.
+5. Average context vectors with `reduce_mean`.
+6. Predict the target with a vocabulary-sized softmax.
+
+`max_pairs` limits memory and runtime. `<UNK>` represents unknown words and
+`<PAD>` reserves an ID, although the current fixed-context construction mostly
+uses complete contexts rather than padding them. The explicit empty-corpus
+`ValueError` is important: silently training on no pairs would hide bad input.
+
+Document vectors and cosine similarity
+--------------------------------------
+
+To represent a review, tweet, or query, the code averages the embeddings of
+its known words. This is a simple bag-of-words-style composition: word order
+is lost, but semantic topic information is retained cheaply.
+
+Cosine similarity is
+
+    cos(a,b) = (a dot b) / (||a|| ||b||)
+
+It compares direction rather than magnitude. A recommender ranks documents by
+cosine similarity to the query vector. A zero vector must be handled carefully
+because it has no meaningful direction; the helper returns zeros for a sentence
+with no known tokens.
+
 4A_CBOW_IMDB.ipynb
-Uses Gensim Word2Vec in CBOW mode to learn word vectors from movie reviews.
-The mean vector of each review becomes a document feature, and a small Keras
-classifier predicts positive or negative sentiment.
+------------------
 
-4B_CBOW_Twitter.ipynb
-Learns word embeddings from tweets and prints words with similar vectors.
-Similarity is based on the angle between vectors, commonly measured with
-cosine similarity.
+Reviews are tokenized with a lowercase alphabetic regular expression. CBOW
+embeddings are averaged into one vector per review, then a small binary
+classifier predicts positive versus negative sentiment. This separates
+representation learning (word vectors) from downstream supervised learning
+(the Dense classifier).
 
-4C_CBOW_document3.ipynb
-Splits a text document into sentences, learns embeddings, and compares words
-related to the document topic.
+4B_CBOW_Twitter.ipynb and 4C_CBOW_document3.ipynb
+-------------------------------------------------
+
+These experiments inspect nearest words using the learned vector space. The
+results are meaningful only when the corpus has enough examples and the word
+is in the vocabulary. The `if word in w2v.wv` checks avoid lookup failures.
 
 4D_CBOW_Recommender.ipynb
-Averages word vectors to represent each tweet, averages the query words, and
-returns tweets whose document vectors have the highest cosine similarity.
+-------------------------
 
-CBOW means Continuous Bag of Words. A model receives surrounding context words
-and learns to predict the center word. Words used in similar contexts acquire
-nearby vectors. The original notebooks use Gensim Word2Vec.
-
-TensorFlow/Keras replacements:
-  cbow_tensorflow_utils.py
-  4A_CBOW_IMDB_tensorflow.py
-  4B_CBOW_Twitter_tensorflow.py
-  4C_CBOW_document3_tensorflow.py
-  4D_CBOW_Recommender_tensorflow.py
-
-These alternatives build context-target pairs, train a Keras Embedding plus
-softmax output layer, average learned vectors for documents, and use cosine
-similarity. They do not require gensim. The helper limits training pairs by
-default so experiments remain practical; increase max_pairs for larger
-corpora.
+Tweet vectors are precomputed once. A query is converted using the same
+embedding model, cosine similarities are calculated, and the five largest
+scores are printed. The TensorFlow version has the identical pipeline and
+shares the reusable functions in `cbow_tensorflow_utils.py`.
 
 
 5. TRANSFER LEARNING
 --------------------
 
+Concept
+-------
+
+Transfer learning reuses knowledge learned on a large source dataset for a
+different target task. A CNN trained on many images already knows general
+visual primitives such as edges, curves, textures, and object parts. Rather
+than learning those from random initialization, a new classifier is attached
+to the pretrained backbone.
+
+Feature extraction freezes the backbone (`base.trainable = False`) and trains
+only the new head. This is fast, needs less target data, and protects useful
+pretrained features. Fine-tuning unfreezes some later backbone layers and
+continues with a small learning rate. It can improve domain-specific accuracy,
+but can overfit or destroy pretrained features if the target dataset is small.
+
+The pretrained model's preprocessing is part of its contract. VGG-style and
+MobileNet-style models may expect different value ranges or preprocessing
+functions. Input dimensions, channel count, and class count must also match
+the new model interface.
+
+GlobalAveragePooling2D averages each feature map over height and width. It
+replaces a large Flatten layer, reduces parameters, and produces one feature
+value per channel before the new Dense head.
+
 5A_Transfer_Caltech101.ipynb
-Uses a pretrained image model as a feature extractor or starting point for
-Caltech101 classification. Early layers recognize general visual patterns,
-while later layers are adapted to the new classes.
+----------------------------
 
-5B_Transfer_IntelImage.ipynb and 5C_Transfer_FashionMNIST.ipynb
-Apply transfer learning to different image datasets. Typical steps are
-resize/preprocess images, load a pretrained backbone, freeze or fine-tune
-layers, attach a new classifier, and evaluate the target task.
+`image_dataset_from_directory` infers labels from subdirectory names and
+creates an 80/20 split using the same seed. VGG16 is loaded with
+`include_top=False`, removing its original ImageNet classifier. Its frozen
+convolutional features feed global average pooling, a 128-unit ReLU layer,
+and a new softmax with `n_classes` outputs.
 
-Important concepts: pretrained weights, feature extraction, freezing layers,
-fine-tuning, input-size compatibility, data augmentation, and overfitting.
+`prefetch(2)` prepares a small number of future batches while the current batch
+trains, improving input throughput without changing the model's mathematics.
+
+5B_Transfer_IntelImage.ipynb
+----------------------------
+
+This is the same feature-extraction workflow with MobileNetV2. The rescaling
+`x / 127.5 - 1` converts 0-255 pixels to approximately -1 through 1, which is
+the expected range for this preprocessing setup. The classifier head has 64
+hidden units and a dataset-dependent final layer.
+
+5C_Transfer_FashionMNIST.ipynb
+------------------------------
+
+Fashion-MNIST is grayscale 28 x 28, while MobileNetV2 expects 32 x 32 RGB.
+The code therefore:
+
+1. Resizes 28 x 28 to 32 x 32.
+2. Concatenates the single grayscale channel three times to create RGB shape.
+3. Rescales to the MobileNet-style -1 to 1 range.
+4. Sends the adapted image through a frozen MobileNetV2 backbone.
+
+This illustrates an important transfer-learning issue: the target data must be
+adapted to the source model's input contract. The first 10,000 training and
+2,000 test examples are a speed-oriented subsample.
 
 
-COMMON KERAS TRAINING IDEAS
----------------------------
+6. KERAS TRAINING API AND PLOTS
+-------------------------------
 
-keras.Sequential defines a simple ordered model. model.compile selects the
-optimizer, loss, and metrics. model.fit performs training over batches and
-epochs. model.evaluate measures held-out performance. A validation set helps
-detect overfitting while training. Plots of loss and accuracy show whether
-the model is learning and whether training and validation behavior diverge.
+`keras.Sequential([...])` is convenient when layers form one straight chain.
+The Fashion-MNIST transfer example uses the functional API because it has
+multiple transformations and an explicit `inputs -> outputs` graph.
 
-Paths in the original notebooks point to ../datasets. Run a notebook from its
-expected working directory, or update those paths before running a script.
-The TensorFlow alternatives expect cbow_tensorflow_utils.py to be beside them.
+`compile` does not train anything. It configures:
+
+* optimizer: Adam, an adaptive gradient-based update method;
+* loss: the numerical objective minimized by backpropagation;
+* metrics: values such as accuracy reported for readability.
+
+`fit` returns a History object. `history.history` contains per-epoch training
+and validation loss/metric arrays. Plotting those arrays helps diagnose:
+
+* underfitting: both training and validation performance are poor;
+* overfitting: training improves while validation stops improving or worsens;
+* optimization trouble: loss is unstable or barely changes.
+
+`evaluate` runs inference without weight updates and reports held-out loss and
+metrics. `predict` produces reconstructions, probabilities, or embeddings,
+depending on the model.
+
+DATASET PATH NOTE
+-----------------
+
+The original notebooks use paths such as `../datasets/...`. Run them from the
+expected directory or update the paths. The TensorFlow CBOW scripts import
+`cbow_tensorflow_utils.py`, so that helper must remain beside the scripts (or
+be available on Python's import path).

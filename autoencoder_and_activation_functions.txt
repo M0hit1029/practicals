@@ -1,0 +1,770 @@
+# AUTOENCODERS AND ACTIVATION FUNCTIONS
+
+============================================================
+1. AUTOENCODER ARCHITECTURE
+============================================================
+
+WHAT IS AN AUTOENCODER?
+
+An autoencoder is an unsupervised neural network that learns to compress data into a smaller representation and then reconstruct the original data from that compressed representation.
+
+Its main objective is to minimize the difference between the original input and the reconstructed output.
+
+Example:
+Suppose we have an image of size 28 x 28 pixels.
+
+- Total input features = 28 x 28 = 784.
+- The encoder compresses these 784 features into 32 features.
+- The decoder takes those 32 features and reconstructs the original 784 features.
+
+An autoencoder has three major components:
+
+1. Encoder
+2. Bottleneck (Latent Space)
+3. Decoder
+
+
+1.1 ENCODER
+
+The encoder compresses the original input into a smaller representation.
+
+Example architecture:
+
+Input Layer:       784 neurons
+       |
+       v
+Hidden Layer:      256 neurons
+       |
+       v
+Hidden Layer:      128 neurons
+       |
+       v
+Latent Layer:       32 neurons
+
+The encoder gradually reduces the dimensionality of the input.
+
+Mathematical representation:
+
+z = f(Wx + b)
+
+Where:
+- x = Original input.
+- W = Weight matrix.
+- b = Bias.
+- f = Activation function.
+- z = Compressed representation.
+
+The encoder learns important patterns and features from the input data.
+
+For example, when compressing handwritten digit images, it may learn features related to edges, curves and shapes.
+
+
+1.2 BOTTLENECK (LATENT SPACE)
+
+The bottleneck is the smallest representation of the original input.
+
+Example:
+Original input: 784 features
+Compressed representation: 32 features
+
+The bottleneck forces the network to learn which information is important enough to preserve.
+
+Why do we need a bottleneck?
+
+If we provide the network with 784 input neurons and 784 output neurons without restricting its capacity, it might simply learn to copy the input.
+
+The bottleneck forces the network to learn a compressed representation instead of directly copying the input.
+
+The compressed representation is called the latent representation.
+
+
+1.3 DECODER
+
+The decoder performs the opposite operation of the encoder.
+
+It takes the compressed representation and attempts to reconstruct the original input.
+
+Example architecture:
+
+Latent Layer:       32 neurons
+       |
+       v
+Hidden Layer:      128 neurons
+       |
+       v
+Hidden Layer:      256 neurons
+       |
+       v
+Output Layer:      784 neurons
+
+Mathematical representation:
+
+x_hat = g(W'z + b')
+
+Where:
+- z = Compressed representation.
+- W' = Decoder weights.
+- b' = Decoder bias.
+- g = Activation function.
+- x_hat = Reconstructed input.
+
+The objective is to make the reconstructed input as close as possible to the original input.
+
+
+============================================================
+2. HOW DOES AN AUTOENCODER LEARN?
+============================================================
+
+An autoencoder learns through a process called reconstruction.
+
+Suppose:
+Original input = x
+Reconstructed output = x_hat
+
+We calculate the reconstruction error using a loss function.
+
+A commonly used loss function is Mean Squared Error (MSE).
+
+MSE = (1/n) * SUM((x_i - x_hat_i)^2)
+
+Where:
+- n = Number of input features.
+- x_i = Original value.
+- x_hat_i = Reconstructed value.
+
+Example:
+
+Original input:       [0.2, 0.5, 0.8]
+Reconstructed input:  [0.3, 0.4, 0.7]
+
+MSE calculation:
+
+MSE = ((0.2 - 0.3)^2 + (0.5 - 0.4)^2 + (0.8 - 0.7)^2) / 3
+
+MSE = (0.01 + 0.01 + 0.01) / 3
+
+MSE = 0.01
+
+The neural network tries to minimize this error.
+
+The training process involves:
+
+1. Forward propagation.
+2. Reconstruction loss calculation.
+3. Backpropagation.
+4. Weight updates using an optimizer such as Adam.
+
+This process repeats over multiple epochs.
+
+IMPORTANT:
+An autoencoder does not require manually assigned labels.
+
+The input itself becomes the target output.
+
+For example:
+
+Input:  [1, 2, 3, 4]
+Target: [1, 2, 3, 4]
+
+The network learns to reconstruct its own input.
+
+
+============================================================
+3. COMPLETE NUMERICAL EXAMPLE OF AN AUTOENCODER
+============================================================
+
+Let's understand an autoencoder using a very small example with actual calculations.
+
+Suppose we have a dataset containing two features:
+
+Feature 1 = Weight of an object (normalized)
+Feature 2 = Height of an object (normalized)
+
+Our input is:
+
+X = [0.8, 0.6]
+
+We want to compress these two features into a single feature and then reconstruct the original input.
+
+For simplicity, consider a very small autoencoder:
+
+Input Layer: 2 neurons
+       |
+       v
+Encoder: 1 neuron
+       |
+       v
+Latent Representation: 1 neuron
+       |
+       v
+Decoder: 2 neurons
+       |
+       v
+Output Layer: 2 neurons
+
+We will use linear activation functions to make the calculations easier.
+
+STEP 1: ENCODER CALCULATION
+
+Suppose the encoder weights are:
+
+W_encoder = [0.5, 0.5]
+Bias = 0
+
+Input:
+
+X = [0.8, 0.6]
+
+Encoder formula:
+
+Z = X * W_encoder + Bias
+
+Substituting:
+
+Z = (0.8 * 0.5) + (0.6 * 0.5) + 0
+
+Z = 0.4 + 0.3
+
+Z = 0.7
+
+Therefore:
+
+Latent Representation = [0.7]
+
+We have compressed two input features into one feature.
+
+STEP 2: DECODER CALCULATION
+
+The decoder takes the compressed representation and reconstructs the original two features.
+
+Suppose decoder weights are:
+
+W_decoder = [0.8, 0.4]
+Bias = [0, 0]
+
+Decoder formula:
+
+X_hat = Z * W_decoder + Bias
+
+Substituting:
+
+X_hat = 0.7 * [0.8, 0.4]
+
+X_hat = [0.56, 0.28]
+
+Therefore:
+
+Original Input:
+[0.8, 0.6]
+
+Reconstructed Output:
+[0.56, 0.28]
+
+STEP 3: CALCULATE RECONSTRUCTION ERROR
+
+We use Mean Squared Error.
+
+MSE = ((0.8 - 0.56)^2 + (0.6 - 0.28)^2) / 2
+
+MSE = (0.24^2 + 0.32^2) / 2
+
+MSE = (0.0576 + 0.1024) / 2
+
+MSE = 0.16 / 2
+
+MSE = 0.08
+
+Our reconstruction loss is 0.08.
+
+STEP 4: WHAT HAPPENS NEXT?
+
+The network calculates gradients using backpropagation.
+
+It updates the encoder and decoder weights to reduce the reconstruction error.
+
+Suppose after training, the network produces:
+
+Original Input:
+[0.8, 0.6]
+
+Reconstructed Output:
+[0.78, 0.59]
+
+New MSE:
+
+MSE = ((0.8 - 0.78)^2 + (0.6 - 0.59)^2) / 2
+
+MSE = (0.0004 + 0.0001) / 2
+
+MSE = 0.00025
+
+Compare the losses:
+
+Before training: 0.08
+After training:  0.00025
+
+The reconstruction has improved significantly.
+
+NOTE:
+The final weights above are illustrative. They are not calculated by actually performing gradient descent on the initial weights.
+
+This is the fundamental working of an autoencoder.
+
+
+============================================================
+4. ACTIVATION FUNCTIONS
+============================================================
+
+WHAT IS AN ACTIVATION FUNCTION?
+
+An activation function is a mathematical function applied to the output of a neuron.
+
+A neuron first calculates a weighted sum of its inputs:
+
+z = w1*x1 + w2*x2 + ... + wn*xn + b
+
+Then it applies an activation function:
+
+a = f(z)
+
+Where:
+- z = Weighted sum.
+- f = Activation function.
+- a = Activated output.
+
+WHY DO WE NEED ACTIVATION FUNCTIONS?
+
+The main purpose is to introduce non-linearity into neural networks.
+
+Without nonlinear activation functions, even a neural network containing multiple hidden layers would behave like a single linear transformation.
+
+
+4.1 SIGMOID ACTIVATION FUNCTION
+
+Formula:
+
+f(x) = 1 / (1 + e^(-x))
+
+Output range: 0 to 1 (exclusive).
+
+Properties:
+- Converts input values into values between 0 and 1.
+- Large negative values approach 0.
+- Large positive values approach 1.
+- Useful when we need probability-like outputs.
+
+Example:
+
+Input = 0
+
+f(0) = 1 / (1 + e^0)
+f(0) = 1 / 2
+f(0) = 0.5
+
+Input = 2
+
+f(2) = 1 / (1 + e^(-2))
+f(2) = 0.8808
+
+When to use sigmoid?
+1. Binary classification output layers.
+2. Predicting probabilities.
+3. Autoencoder output layers when reconstructing data normalized between 0 and 1.
+
+Keras example:
+
+layers.Dense(1, activation="sigmoid")
+
+Disadvantages:
+- Suffers from the vanishing gradient problem for very large positive or negative inputs.
+- Not generally preferred for hidden layers in deep neural networks.
+
+
+4.2 TANH ACTIVATION FUNCTION
+
+Formula:
+
+f(x) = (e^x - e^(-x)) / (e^x + e^(-x))
+
+Output range: -1 to 1.
+
+Properties:
+- Produces both positive and negative outputs.
+- Zero-centered.
+- Useful when negative values are meaningful.
+
+Examples:
+
+tanh(0) = 0
+tanh(1) = 0.7616
+tanh(-1) = -0.7616
+
+When to use tanh?
+1. Certain recurrent neural network architectures.
+2. When zero-centered activations are useful.
+3. When output values need to be between -1 and 1.
+4. Autoencoder output layers when reconstructing data normalized between -1 and 1.
+
+Keras example:
+
+layers.Dense(64, activation="tanh")
+
+Disadvantage:
+It can also suffer from the vanishing gradient problem.
+
+
+4.3 RELU (RECTIFIED LINEAR UNIT)
+
+Formula:
+
+f(x) = max(0, x)
+
+Output range: 0 to infinity.
+
+Properties:
+- If input is negative, output is 0.
+- If input is positive, output is the input itself.
+- Computationally inexpensive.
+- Helps reduce the vanishing gradient problem for positive inputs.
+
+Examples:
+
+Input = -5
+ReLU(-5) = 0
+
+Input = 0
+ReLU(0) = 0
+
+Input = 5
+ReLU(5) = 5
+
+When to use ReLU?
+1. Hidden layers of Feedforward Neural Networks.
+2. CNN architectures.
+3. Encoder and decoder hidden layers of autoencoders.
+4. Deep neural networks.
+
+Keras example:
+
+layers.Dense(128, activation="relu")
+
+Disadvantage:
+Dying ReLU problem.
+
+If a neuron consistently receives negative inputs, it outputs zero and may stop learning.
+
+
+4.4 LEAKY RELU
+
+Formula:
+
+f(x) = x, if x > 0
+f(x) = 0.01*x, if x <= 0
+
+Output range: Negative infinity to positive infinity.
+
+Properties:
+- Similar to ReLU.
+- Allows small negative outputs.
+- Helps reduce the dying ReLU problem.
+
+Examples:
+
+Input = -10
+LeakyReLU(-10) = -0.1
+
+Input = 5
+LeakyReLU(5) = 5
+
+When to use Leaky ReLU?
+1. When dying ReLU is a concern.
+2. GAN architectures.
+3. Hidden layers where small negative gradients are useful.
+
+Keras example:
+
+layers.Dense(128)
+layers.LeakyReLU(negative_slope=0.01)
+
+
+4.5 SOFTMAX ACTIVATION FUNCTION
+
+Formula:
+
+f(x_i) = e^(x_i) / SUM(e^(x_j))
+
+Output range: 0 to 1.
+The sum of all output probabilities is 1.
+
+Suppose a model predicts three classes:
+
+Class A = 2.0
+Class B = 1.0
+Class C = 0.5
+
+Softmax converts these values approximately into:
+
+Class A = 0.59
+Class B = 0.24
+Class C = 0.17
+
+Sum = 1.0
+
+When to use Softmax?
+1. Multi-class classification.
+2. Image classification with mutually exclusive classes.
+3. Output layers where we want a probability distribution over classes.
+
+Keras example:
+
+layers.Dense(10, activation="softmax")
+
+
+4.6 LINEAR ACTIVATION FUNCTION
+
+Formula:
+
+f(x) = x
+
+Output range: Negative infinity to positive infinity.
+
+Properties:
+- Does not modify the input.
+- Output can be any real number.
+
+When to use Linear?
+1. Regression problems.
+2. Predicting house prices.
+3. Predicting temperatures.
+4. Autoencoder output layers when reconstructing unrestricted continuous values.
+
+Keras example:
+
+layers.Dense(1, activation="linear")
+
+
+4.7 ELU (EXPONENTIAL LINEAR UNIT)
+
+Formula:
+
+f(x) = x, if x > 0
+f(x) = alpha * (e^x - 1), if x <= 0
+
+Properties:
+- Similar to ReLU for positive values.
+- Produces smooth negative outputs.
+- Allows negative activations.
+
+When to use ELU?
+1. As an alternative to ReLU.
+2. Deep neural networks where nonzero negative activations are useful.
+
+Keras example:
+
+layers.Dense(128, activation="elu")
+
+
+============================================================
+5. COMPARISON OF ACTIVATION FUNCTIONS
+============================================================
+
+Activation       Output range                 Common use
+
+Sigmoid          (0, 1)                       Binary classification
+Tanh             (-1, 1)                      RNNs, bounded outputs
+ReLU             [0, infinity)                Hidden layers
+Leaky ReLU       (-infinity, infinity)        Hidden layers, GANs
+Softmax          (0, 1), sum = 1              Multi-class classification
+Linear           (-infinity, infinity)        Regression
+ELU              (-alpha, infinity)           Alternative to ReLU
+
+
+============================================================
+6. WHICH ACTIVATION FUNCTION SHOULD WE USE IN AN AUTOENCODER?
+============================================================
+
+This depends on the type of data we are reconstructing.
+
+Suppose we are building an autoencoder for MNIST images.
+
+Our images have:
+- Image size = 28 x 28.
+- Input features = 784.
+- Pixel values normalized between 0 and 1.
+
+A possible architecture:
+
+Input Layer: 784 neurons
+
+Encoder:
+784 -> 256 -> 128 -> 32
+
+Decoder:
+32 -> 128 -> 256 -> 784
+
+Activation functions:
+
+Encoder hidden layers: ReLU
+Bottleneck: ReLU or Linear
+Decoder hidden layers: ReLU
+Output layer: Sigmoid
+
+Why?
+
+1. ReLU is a common choice for hidden layers because it introduces non-linearity and is computationally efficient.
+2. The bottleneck can use ReLU or linear activation depending on the desired latent representation.
+3. The decoder uses ReLU to reconstruct intermediate features.
+4. Sigmoid restricts output pixels between 0 and 1.
+
+If the input is normalized between -1 and 1, tanh can be used in the output layer.
+
+If the input contains unrestricted continuous values, linear output is often appropriate.
+
+
+============================================================
+7. IMPLEMENTATION OF AUTOENCODER USING TENSORFLOW/KERAS
+============================================================
+
+Example: MNIST-style image reconstruction.
+
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+
+# Encoder
+encoder_input = keras.Input(shape=(784,))
+
+x = layers.Dense(256, activation="relu")(encoder_input)
+x = layers.Dense(128, activation="relu")(x)
+
+latent = layers.Dense(32, activation="relu")(x)
+
+# Decoder
+x = layers.Dense(128, activation="relu")(latent)
+x = layers.Dense(256, activation="relu")(x)
+
+output = layers.Dense(784, activation="sigmoid")(x)
+
+# Complete Autoencoder
+autoencoder = keras.Model(encoder_input, output)
+
+autoencoder.compile(
+    optimizer="adam",
+    loss="mse"
+)
+
+autoencoder.summary()
+
+Training:
+
+autoencoder.fit(
+    x_train,
+    x_train,
+    epochs=20,
+    batch_size=128,
+    validation_data=(x_test, x_test)
+)
+
+Notice:
+
+autoencoder.fit(x_train, x_train)
+
+We pass the same dataset as both input and target because the autoencoder learns to reconstruct its own input.
+
+Implementation note:
+For MNIST, x_train and x_test should be converted to floating-point values, normalized to [0, 1], and reshaped into vectors of 784 features before using this dense architecture.
+
+
+============================================================
+8. APPLICATION OF AUTOENCODERS: ANOMALY DETECTION
+============================================================
+
+Autoencoders are commonly used for anomaly detection.
+
+Consider a credit card fraud detection problem.
+
+Suppose we have a dataset containing normal and fraudulent transactions.
+
+We train the autoencoder primarily on normal transactions.
+
+During testing:
+
+NORMAL TRANSACTION:
+- The model has learned patterns of normal transactions.
+- It can reconstruct them relatively well.
+- Reconstruction error is generally low.
+
+UNUSUAL TRANSACTION:
+- The model may struggle to reconstruct it.
+- Reconstruction error may be high.
+
+We define a threshold:
+
+If Reconstruction Error > Threshold:
+    Flag transaction as potential anomaly.
+Otherwise:
+    Consider transaction normal.
+
+Example:
+
+Normal transaction reconstruction error = 0.02
+Fraudulent transaction reconstruction error = 0.85
+
+Suppose threshold = 0.1.
+
+0.02 < 0.1 -> Normal
+0.85 > 0.1 -> Potential anomaly
+
+IMPORTANT:
+High reconstruction error does not automatically mean fraud. The threshold must be selected using validation data, and some fraudulent transactions may also have low reconstruction error.
+
+
+============================================================
+9. IMPORTANT CONCEPTS TO REMEMBER
+============================================================
+
+1. Encoder:
+   Compresses the original input.
+
+2. Bottleneck:
+   Stores the compressed representation.
+
+3. Decoder:
+   Reconstructs the original input.
+
+4. Reconstruction Loss:
+   Measures the difference between original and reconstructed input.
+
+5. MSE:
+   Common loss function for continuous-valued reconstruction.
+
+6. Backpropagation:
+   Updates weights to reduce reconstruction error.
+
+7. Latent Space:
+   Compressed representation learned by the encoder.
+
+8. Anomaly Detection:
+   Uses reconstruction error to identify unusual data.
+
+THE MOST IMPORTANT IDEA:
+
+An autoencoder is not trained to predict a different label. It is trained to reproduce its own input while learning a useful compressed representation.
+
+
+============================================================
+10. QUICK REVISION
+============================================================
+
+- Autoencoder = Encoder + Bottleneck + Decoder.
+- Encoder compresses data.
+- Bottleneck stores a compact representation.
+- Decoder reconstructs data.
+- Input is also the target output.
+- Reconstruction loss measures how well the model reconstructs the input.
+- ReLU is commonly used in hidden layers.
+- Sigmoid is useful for outputs in the range [0, 1].
+- Tanh is useful for outputs in the range [-1, 1].
+- Linear is useful for unrestricted continuous outputs.
+- Softmax is used for mutually exclusive multi-class classification.
+- Autoencoders can be used for dimensionality reduction, denoising and anomaly detection.
