@@ -1,0 +1,138 @@
+PRACTICAL DEEP-LEARNING CODE GUIDE
+===================================
+
+This folder contains 19 notebooks, collected into all.py. The sections below
+explain the main code and concepts used in each practical. The notebook files
+remain the best place to run one experiment at a time because all.py executes
+many independent experiments in sequence.
+
+
+1. FEED-FORWARD NEURAL NETWORKS (FNN)
+-------------------------------------
+
+1B_FNN_FashionMNIST.ipynb
+Loads Fashion-MNIST CSV data, separates labels from 784 pixel features, scales
+pixels to 0-1, and trains a dense neural network. ReLU learns nonlinear
+features and softmax produces probabilities for ten clothing classes.
+
+1C_FNN_CIFAR10.ipynb
+Loads CIFAR-10 image arrays, normalizes RGB values, and trains a fully
+connected classifier. Flattening makes the image suitable for Dense layers,
+but it removes the spatial relationships that a CNN can use.
+
+1E_FNN_SignMNIST.ipynb
+Uses the same supervised classification pattern for hand-sign images:
+preprocess images, encode labels, train Dense layers, and evaluate accuracy.
+
+Important concepts: supervised learning, train/test split, normalization,
+Dense layers, ReLU, softmax, cross-entropy loss, Adam optimization, epochs,
+validation data, and accuracy.
+
+
+2. CONVOLUTIONAL NEURAL NETWORKS (CNN)
+--------------------------------------
+
+2A_CNN_CIFAR10.ipynb
+Trains a CNN on color CIFAR-10 images. Convolution filters detect local
+patterns such as edges and textures; pooling reduces spatial size and makes
+features more robust. Dense layers classify the learned representation.
+
+2B_CNN_HandMNIST.ipynb and 2C_CNN_SignMNIST.ipynb
+Apply the same image-recognition pipeline to hand and sign datasets. The
+important difference from an FNN is that image height, width, and channels are
+preserved while convolution extracts spatial features.
+
+Important concepts: Conv2D, pooling, feature maps, padding, stride, dropout,
+data shape (height, width, channels), and image augmentation.
+
+
+3. AUTOENCODERS (AE) AND ANOMALY DETECTION
+------------------------------------------
+
+3A_AE_CreditCard.ipynb
+Learns to reconstruct normal transaction features through a bottleneck.
+Reconstruction error can identify transactions that do not look normal.
+
+3B_AE_ECG_sub_MVTec.ipynb, 3E_AE_ECG_sub_NSLKDD.ipynb, and
+3F_AE_SignMNIST_anomaly.ipynb
+Use autoencoders for signals, network records, or sign images. The model
+learns a compact encoding and a decoder reconstructs the input. A threshold
+on reconstruction loss separates likely anomalies from normal samples.
+
+3C_AE_Energy_LSTM.ipynb and 3D_AE_NASA_LSTM.ipynb
+Use LSTM-based sequence autoencoders. LSTMs retain information across time
+steps, which is useful for energy and equipment sensor measurements.
+
+Important concepts: encoder, latent/bottleneck vector, decoder, reconstruction
+loss (usually mean squared error), sequence windows, LSTM memory, and anomaly
+threshold selection.
+
+
+4. WORD EMBEDDINGS AND CBOW
+---------------------------
+
+4A_CBOW_IMDB.ipynb
+Uses Gensim Word2Vec in CBOW mode to learn word vectors from movie reviews.
+The mean vector of each review becomes a document feature, and a small Keras
+classifier predicts positive or negative sentiment.
+
+4B_CBOW_Twitter.ipynb
+Learns word embeddings from tweets and prints words with similar vectors.
+Similarity is based on the angle between vectors, commonly measured with
+cosine similarity.
+
+4C_CBOW_document3.ipynb
+Splits a text document into sentences, learns embeddings, and compares words
+related to the document topic.
+
+4D_CBOW_Recommender.ipynb
+Averages word vectors to represent each tweet, averages the query words, and
+returns tweets whose document vectors have the highest cosine similarity.
+
+CBOW means Continuous Bag of Words. A model receives surrounding context words
+and learns to predict the center word. Words used in similar contexts acquire
+nearby vectors. The original notebooks use Gensim Word2Vec.
+
+TensorFlow/Keras replacements:
+  cbow_tensorflow_utils.py
+  4A_CBOW_IMDB_tensorflow.py
+  4B_CBOW_Twitter_tensorflow.py
+  4C_CBOW_document3_tensorflow.py
+  4D_CBOW_Recommender_tensorflow.py
+
+These alternatives build context-target pairs, train a Keras Embedding plus
+softmax output layer, average learned vectors for documents, and use cosine
+similarity. They do not require gensim. The helper limits training pairs by
+default so experiments remain practical; increase max_pairs for larger
+corpora.
+
+
+5. TRANSFER LEARNING
+--------------------
+
+5A_Transfer_Caltech101.ipynb
+Uses a pretrained image model as a feature extractor or starting point for
+Caltech101 classification. Early layers recognize general visual patterns,
+while later layers are adapted to the new classes.
+
+5B_Transfer_IntelImage.ipynb and 5C_Transfer_FashionMNIST.ipynb
+Apply transfer learning to different image datasets. Typical steps are
+resize/preprocess images, load a pretrained backbone, freeze or fine-tune
+layers, attach a new classifier, and evaluate the target task.
+
+Important concepts: pretrained weights, feature extraction, freezing layers,
+fine-tuning, input-size compatibility, data augmentation, and overfitting.
+
+
+COMMON KERAS TRAINING IDEAS
+---------------------------
+
+keras.Sequential defines a simple ordered model. model.compile selects the
+optimizer, loss, and metrics. model.fit performs training over batches and
+epochs. model.evaluate measures held-out performance. A validation set helps
+detect overfitting while training. Plots of loss and accuracy show whether
+the model is learning and whether training and validation behavior diverge.
+
+Paths in the original notebooks point to ../datasets. Run a notebook from its
+expected working directory, or update those paths before running a script.
+The TensorFlow alternatives expect cbow_tensorflow_utils.py to be beside them.
